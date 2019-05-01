@@ -13,7 +13,7 @@ Vehicle(const vector<double> &input_map_waypoints_x,
 		const vector<double> &input_map_waypoints_dx,
 		const vector<double> &input_map_waypoints_dy,
 		const double &input_ref_vel,
-		const int &input_lane);
+	    const int &input_lane);
 
 virtual ~Vehicle(){};
 

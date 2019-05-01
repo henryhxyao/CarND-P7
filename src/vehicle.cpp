@@ -111,7 +111,7 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
   	ref_x = previous_path_x[prev_size-1];
   	ref_y = previous_path_y[prev_size-1];
 
-	  double ref_x_prev = previous_path_x[prev_size-2];
+	double ref_x_prev = previous_path_x[prev_size-2];
   	double ref_y_prev = previous_path_y[prev_size-2];
   	ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
 
@@ -119,7 +119,7 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
   	ptsx.push_back(ref_x);
 
   	ptsy.push_back(ref_y_prev);
-	  ptsy.push_back(ref_y);
+	ptsy.push_back(ref_y);
   }
 
   // add long-distance anchor points
@@ -144,13 +144,11 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
   	ptsy[i] = (shift_x * sin(0-ref_yaw) + shift_y*cos(0-ref_yaw));
   }
 
-	tk::spline s;
-	s.set_points(ptsx,ptsy);
+  tk::spline s;
+  s.set_points(ptsx,ptsy);
 
-	for (int i =0; i< previous_path_x.size(); i++){
-	  next_x_vals.push_back(previous_path_x[i]);
-	  next_y_vals.push_back(previous_path_y[i]);
-	}
+  next_x_vals = std::move(previous_path_x);
+  next_y_vals = std::move(previous_path_y);
 
   double target_x = 30.0;
   double target_y = s(target_x);
@@ -158,7 +156,7 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
 
   double x_add_on = 0;
 
-  for (int i =1; i<= 50-previous_path_x.size();++i) {
+  for (int i =1; i<= 50-prev_size;++i) {
 
   	double N = (target_dist/(.02*ref_vel/2.24));
   	double x_point = x_add_on + target_x/N;

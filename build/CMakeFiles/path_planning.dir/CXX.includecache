@@ -871,14 +871,20 @@ algorithm
 /home/henry/workspace/CarND-P7/src/vehicle.cpp
 vector
 -
+string
+-
+math.h
+-
+iostream
+-
+algorithm
+-
 vehicle.h
 /home/henry/workspace/CarND-P7/src/vehicle.h
 helpers.h
 /home/henry/workspace/CarND-P7/src/helpers.h
 spline.h
 /home/henry/workspace/CarND-P7/src/spline.h
-iostream
--
 
 /home/henry/workspace/CarND-P7/src/vehicle.h
 vector

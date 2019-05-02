@@ -3,6 +3,14 @@
 
 #include <vector>
 using std::vector;
+using std::string;
+
+struct Trajectory {
+  vector<double> next_x_vals;
+  vector<double> next_y_vals;
+  double ref_vel;
+  double dist_lane_change;
+};
 
 class Vehicle {
 public:
@@ -11,9 +19,7 @@ Vehicle(const vector<double> &input_map_waypoints_x,
 		const vector<double> &input_map_waypoints_y,
 		const vector<double> &input_map_waypoints_s,
 		const vector<double> &input_map_waypoints_dx,
-		const vector<double> &input_map_waypoints_dy,
-		const double &input_ref_vel,
-	    const int &input_lane);
+		const vector<double> &input_map_waypoints_dy);
 
 virtual ~Vehicle(){};
 
@@ -29,11 +35,9 @@ void setState(const double &input_car_x,
 			  const double &input_end_path_d);
 
 void FSMPlanner(const vector<vector<double>> &sensor_fusion);
-bool splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &next_y_vals);
-
-// control value
-double ref_vel;
-double lane;
+vector<string> successorStates();
+Trajectory splineTrajectoryGen(double goal_vel, double goal_lane);
+double calculateCost(const vector<vector<double>> &sensor_fusion, Trajectory candidate_trajectory);
 
 // vehicle current state
 double car_x;
@@ -49,6 +53,9 @@ vector<double> previous_path_y;
 int prev_size;
 double end_path_s;
 double end_path_d;
+
+// best trajectory
+Trajectory best_trajectory;
 
 // waypoints info
 vector<double> map_waypoints_x;

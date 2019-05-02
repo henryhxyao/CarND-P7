@@ -53,13 +53,8 @@ int main() {
     map_waypoints_dy.push_back(d_y);
   }
 
-  // start in lane 1:
-  int lane = 1;
 
-  // have a reference velocity to target 
-  double ref_vel = 0;
-
-  Vehicle agent(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy, ref_vel, lane);
+  Vehicle agent(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 
   h.onMessage([&agent]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -105,12 +100,11 @@ int main() {
 
           json msgJson;
 
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
-
           agent.FSMPlanner(sensor_fusion);
-          agent.splineTrajectoryGen(next_x_vals, next_y_vals);
-          
+
+          vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 50);
+          vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.best_trajectory.next_y_vals.cbegin() + 50);
+
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 

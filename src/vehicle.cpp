@@ -1,26 +1,28 @@
 #include <vector>
+#include <string>
+#include <math.h> 
+#include <iostream>
+#include <algorithm>
 #include "vehicle.h"
 #include "helpers.h"
 #include "spline.h"
 using std::vector;
-#include <iostream>
+using std::string;
+using std::cout;
+using std::endl;
 
 Vehicle::Vehicle(const vector<double> &input_map_waypoints_x,
 				const vector<double> &input_map_waypoints_y,
 				const vector<double> &input_map_waypoints_s,
 				const vector<double> &input_map_waypoints_dx,
-				const vector<double> &input_map_waypoints_dy,
-				const double &input_ref_vel,
-				const int &input_lane) {
+				const vector<double> &input_map_waypoints_dy) {
 
 map_waypoints_x = std::move(input_map_waypoints_x);
 map_waypoints_y = std::move(input_map_waypoints_y);
 map_waypoints_s = std::move(input_map_waypoints_s);
 map_waypoints_dx = std::move(input_map_waypoints_dx);
 map_waypoints_dy = std::move(input_map_waypoints_dy);
-ref_vel = input_ref_vel;
-lane = input_lane;
-
+best_trajectory.ref_vel = 0.0;
 }
 
 void Vehicle::setState(const double &input_car_x,
@@ -49,42 +51,89 @@ end_path_d = input_end_path_d;
 }
 
 void Vehicle::FSMPlanner(const vector<vector<double>> &sensor_fusion) {
-  if(prev_size > 0) {
-    car_s = end_path_s;
+
+  vector<string> candidate_states = successorStates();
+  cout << "**********************************************" << endl;
+  for(int i=0; i<candidate_states.size(); i++) {
+  	cout << candidate_states[i] << endl;
   }
+  float cost;
+  vector<float> costs;
+  vector<Trajectory> final_trajectories;
+  double current_lane = floor(car_d/4);
 
-  bool too_close = false;
+  for(int i = 0; i < candidate_states.size(); ++i) {
+    double goal_lane;
+    if (candidate_states[i] == "KL") {
+    	goal_lane = current_lane;
+    }
+    else if(candidate_states[i] == "LCL") {
+    	goal_lane = current_lane - 1;    	
+    }
+    else if (candidate_states[i] == "LCR") {
+    	goal_lane = current_lane + 1; 
+    }
+    cout << "next_state " << candidate_states[i] << "/goal_lane " << goal_lane << endl;
+    
+    double speed_up = 0.224;
+    // acceleration
+    Trajectory candidate_trajectory_acc = splineTrajectoryGen(best_trajectory.ref_vel + speed_up, goal_lane);
+    if (candidate_trajectory_acc.next_x_vals.size()!=0) {
+      cout << "acc " << endl;      
+      final_trajectories.push_back(candidate_trajectory_acc);
+      cost = calculateCost(sensor_fusion, candidate_trajectory_acc);
+      costs.push_back(cost);
 
-  for (int i = 0; i< sensor_fusion.size(); ++i) {
+    }
 
-  	float d = sensor_fusion[i][6];
-  	if( d<(2+4*lane+2) && d>(2+4*lane-2)) {
-  	  double vx = sensor_fusion[i][3];
-  	  double vy = sensor_fusion[i][4];
-  	  double check_speed = sqrt(vx*vx + vy*vy);
-  	  double check_car_s = sensor_fusion[i][5];
+    // constant speed
+    Trajectory candidate_trajectory_const = splineTrajectoryGen(best_trajectory.ref_vel, goal_lane);  
+    if (candidate_trajectory_const.next_x_vals.size()!=0) {
+      cout << "const " << endl;   
+      final_trajectories.push_back(candidate_trajectory_const);
+      cost = calculateCost(sensor_fusion, candidate_trajectory_const);
+      costs.push_back(cost);
+    }
 
-  	  check_car_s += ((double)prev_size*.02*check_speed);
-
-  	  if ((check_car_s > car_s) && ((check_car_s-car_s)<30)) {
-  		  too_close = true;
-  		  if(lane > 0) {
-  		  	lane = 0;
-  		  }
-  	  }
+    // deceleration
+    Trajectory candidate_trajectory_dec = splineTrajectoryGen(best_trajectory.ref_vel - speed_up, goal_lane);
+    if (candidate_trajectory_dec.next_x_vals.size()!=0) {
+      cout << "dec " << endl;   
+      final_trajectories.push_back(candidate_trajectory_dec);
+      cost = calculateCost(sensor_fusion, candidate_trajectory_dec);
+      costs.push_back(cost);
     }
   }
 
-  if (too_close) {
-
-  	ref_vel -= .224;
-  }
-  else if (ref_vel < 49.5) {
-  	ref_vel += .224;
-  }
+  auto best_cost = std::min_element(costs.cbegin(), costs.cend());
+  int best_idx = std::distance(costs.cbegin(), best_cost);  
+  best_trajectory = std::move(final_trajectories[best_idx]);
+  cout << "best_vel/ " << best_trajectory.ref_vel << endl;
 }
 
-bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &next_y_vals) {
+vector<string> Vehicle::successorStates(){
+  vector<string> candidate_states;
+  if (car_d < 4){
+    candidate_states.push_back("KL");
+    candidate_states.push_back("LCR");
+  }
+  else if (car_d >= 8) {
+    candidate_states.push_back("KL");
+    candidate_states.push_back("LCL");	
+  }
+  else {
+    candidate_states.push_back("KL");
+    candidate_states.push_back("LCL");
+    candidate_states.push_back("LCR");	 	
+  }
+  return candidate_states;
+}
+
+Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
+  Trajectory spline_trajectory;
+  spline_trajectory.ref_vel = goal_vel;
+  spline_trajectory.dist_lane_change = std::abs(2 + 4 * goal_lane-car_d);
+
   // define container for spline curve anchor points
   vector<double> ptsx;
   vector<double> ptsy;
@@ -92,7 +141,7 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
   double ref_x = car_x;
   double ref_y = car_y;
   double ref_yaw = deg2rad(car_yaw);
-  
+
 
   // if no previous path
   if(prev_size < 2){
@@ -104,28 +153,30 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
 
   	ptsy.push_back(prev_car_y);
     ptsy.push_back(car_y);
+
   }
 
   // if has previous path
   else {
   	ref_x = previous_path_x[prev_size-1];
   	ref_y = previous_path_y[prev_size-1];
-
+	
 	double ref_x_prev = previous_path_x[prev_size-2];
   	double ref_y_prev = previous_path_y[prev_size-2];
   	ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
-
+   
   	ptsx.push_back(ref_x_prev);
   	ptsx.push_back(ref_x);
 
   	ptsy.push_back(ref_y_prev);
 	ptsy.push_back(ref_y);
   }
+  
 
   // add long-distance anchor points
-  vector<double> next_wp0 = getXY(car_s + 30, 2+4*lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-  vector<double> next_wp1 = getXY(car_s + 60, 2+4*lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-  vector<double> next_wp2 = getXY(car_s + 90, 2+4*lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+  vector<double> next_wp0 = getXY(car_s + 40, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+  vector<double> next_wp1 = getXY(car_s + 80, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+  vector<double> next_wp2 = getXY(car_s + 120, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
   ptsx.push_back(next_wp0[0]);
   ptsx.push_back(next_wp1[0]);
@@ -134,6 +185,7 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
   ptsy.push_back(next_wp0[1]);
   ptsy.push_back(next_wp1[1]);
   ptsy.push_back(next_wp2[1]);
+
 
   // transform to vehicle coordinates system
   for(int i =0; i<ptsx.size();++i){
@@ -147,8 +199,8 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
   tk::spline s;
   s.set_points(ptsx,ptsy);
 
-  next_x_vals = std::move(previous_path_x);
-  next_y_vals = std::move(previous_path_y);
+  spline_trajectory.next_x_vals = previous_path_x;
+  spline_trajectory.next_y_vals = previous_path_y;
 
   double target_x = 30.0;
   double target_y = s(target_x);
@@ -156,9 +208,10 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
 
   double x_add_on = 0;
 
-  for (int i =1; i<= 50-prev_size;++i) {
+  double horizon = 2;
+  for (int i =1; i<= (horizon*50-prev_size);++i) {
 
-  	double N = (target_dist/(.02*ref_vel/2.24));
+  	double N = (target_dist/(.02*goal_vel/2.24));
   	double x_point = x_add_on + target_x/N;
   	double y_point = s(x_point);
 
@@ -173,14 +226,76 @@ bool Vehicle::splineTrajectoryGen(vector<double> &next_x_vals, vector<double> &n
   	x_point += ref_x;
   	y_point += ref_y;
 
-  	next_x_vals.push_back(x_point);
-  	next_y_vals.push_back(y_point);
+  	spline_trajectory.next_x_vals.push_back(x_point);
+  	spline_trajectory.next_y_vals.push_back(y_point);
   }
 
-  if (next_x_vals.size() != 0) {
-    return 0;
+  return spline_trajectory;
+}
+
+double Vehicle::calculateCost(const vector<vector<double>> &sensor_fusion, Trajectory candidate_trajectory) {
+
+  double cost_speed;
+  double cost_change_lane;
+  double cost_safe_distance;
+  vector<double> weights = {0.5, 0.5, 0.5};
+
+  // cost_speed
+  double max_speed = 49.5;
+  cost_speed = 1 - exp(- (max_speed - candidate_trajectory.ref_vel)/max_speed);
+  if (candidate_trajectory.ref_vel >= max_speed) {
+   cost_speed = 2;
   }
-  else {
-    return 1;
+  cout << "ref_vel" << candidate_trajectory.ref_vel << endl;
+  cout << "cost_speed " << cost_speed << endl;
+
+  // cost_change_lane
+  cost_change_lane = 1 - exp(-candidate_trajectory.dist_lane_change / 4);
+  cout << "cost_change_lane " << cost_change_lane << endl;
+
+  // cost_safe_distance
+  int candidate_trajectory_size = candidate_trajectory.next_x_vals.size();
+  double candidate_end_x = candidate_trajectory.next_x_vals[candidate_trajectory_size-1];
+  double candidate_end_y = candidate_trajectory.next_y_vals[candidate_trajectory_size-1];
+  double candidate_end_prev_x = candidate_trajectory.next_x_vals[candidate_trajectory_size-2];
+  double candidate_end_prev_y = candidate_trajectory.next_y_vals[candidate_trajectory_size-2];
+  double theta = atan2(candidate_end_y - candidate_end_prev_y, candidate_end_x - candidate_end_prev_x);
+
+  vector<double> candidate_end_frenet = getFrenet(candidate_end_x, candidate_end_y, theta, map_waypoints_x, map_waypoints_y);
+  double candidate_end_s = candidate_end_frenet[0];
+  double candidate_end_d = candidate_end_frenet[1];
+  double candidate_end_lane = floor(candidate_end_d/4);
+  
+  double min_distance = 99999.0;
+  for (int i = 0; i< sensor_fusion.size(); ++i) {
+
+  	float d = sensor_fusion[i][6];
+  	if( d<(2+4*candidate_end_lane+2) && d>(2+4*candidate_end_lane-2)) {
+  	  double vx = sensor_fusion[i][3];
+  	  double vy = sensor_fusion[i][4];
+  	  double check_speed = sqrt(vx*vx + vy*vy);
+  	  double check_car_s = sensor_fusion[i][5];
+
+  	  check_car_s += ((double)candidate_trajectory_size*.02*check_speed);
+
+  	  if (check_car_s > candidate_end_s) {
+        if ((check_car_s-candidate_end_s) < min_distance) {
+        	min_distance = check_car_s-candidate_end_s;
+        }
+  	  }
+    }
   }
+  
+  double safe_distance = 80;
+  cost_safe_distance = 1 - exp(-safe_distance/min_distance);
+  if (min_distance <= safe_distance) {
+  	cost_safe_distance = 4;
+  }
+
+  cout << "safe_distance" << cost_safe_distance << endl;
+
+  // weighted_cost 
+  double weighted_cost = cost_speed * weights[0] + cost_change_lane * weights[1] + cost_safe_distance * weights[2];
+  cout << "weighted_cost" << weighted_cost << endl;
+  return weighted_cost;
 }

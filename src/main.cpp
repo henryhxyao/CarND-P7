@@ -100,8 +100,11 @@ int main() {
 
           json msgJson;
 
-          agent.FSMPlanner(sensor_fusion);
+          agent.generatePrediction(sensor_fusion);
 
+          agent.FSMPlanner();
+          
+          // use the first 1 second trajectory from the best trajectory
           vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 50);
           vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.best_trajectory.next_y_vals.cbegin() + 50);
 

@@ -50,7 +50,35 @@ end_path_s = input_end_path_s;
 end_path_d = input_end_path_d;
 }
 
-void Vehicle::FSMPlanner(const vector<vector<double>> &sensor_fusion) {
+void Vehicle::generatePrediction(const vector<vector<double>> &sensor_fusion) {
+  prediction.clear();
+  for (int i = 0; i< sensor_fusion.size(); ++i) {
+    double detected_car_x = sensor_fusion[i][1];
+    double detected_car_y = sensor_fusion[i][2];
+    if (distance(car_x, car_y, detected_car_x, detected_car_y)<100.0) {
+      PredictedTrajectory check_prediction;
+      check_prediction.id = sensor_fusion[i][0];
+  	  double vx = sensor_fusion[i][3];
+  	  double vy = sensor_fusion[i][4];
+  	  double check_car_s = sensor_fusion[i][5];  
+  	  float check_car_d = sensor_fusion[i][6];
+  	  double check_speed = sqrt(vx*vx + vy*vy);
+      check_prediction.start_s = check_car_s;
+
+      for(int i = 0; i < horizon*50; ++i) {
+        double check_car_s_predict = check_car_s + (i * 0.02 * check_speed);
+        vector<double> check_car_xy = getXY(check_car_s_predict, check_car_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+        check_prediction.predicted_x.push_back(check_car_xy[0]);
+        check_prediction.predicted_y.push_back(check_car_xy[1]);
+      }
+      check_prediction.final_d = check_car_d;
+      check_prediction.final_s = check_car_s + ((horizon * 50-1) * 0.02 * check_speed);
+      prediction.push_back(check_prediction);
+    }
+  }
+}
+
+void Vehicle::FSMPlanner() {
 
   vector<string> candidate_states = successorStates();
   cout << "**********************************************" << endl;
@@ -73,34 +101,26 @@ void Vehicle::FSMPlanner(const vector<vector<double>> &sensor_fusion) {
     else if (candidate_states[i] == "LCR") {
     	goal_lane = current_lane + 1; 
     }
+    cout << " " << endl;
     cout << "next_state " << candidate_states[i] << "/goal_lane " << goal_lane << endl;
     
     double speed_up = 0.224;
     // acceleration
     Trajectory candidate_trajectory_acc = splineTrajectoryGen(best_trajectory.ref_vel + speed_up, goal_lane);
     if (candidate_trajectory_acc.next_x_vals.size()!=0) {
-      cout << "acc " << endl;      
+      cout << "*************acc*************" << endl;      
       final_trajectories.push_back(candidate_trajectory_acc);
-      cost = calculateCost(sensor_fusion, candidate_trajectory_acc);
+      cost = calculateCost(candidate_trajectory_acc);
       costs.push_back(cost);
 
-    }
-
-    // constant speed
-    Trajectory candidate_trajectory_const = splineTrajectoryGen(best_trajectory.ref_vel, goal_lane);  
-    if (candidate_trajectory_const.next_x_vals.size()!=0) {
-      cout << "const " << endl;   
-      final_trajectories.push_back(candidate_trajectory_const);
-      cost = calculateCost(sensor_fusion, candidate_trajectory_const);
-      costs.push_back(cost);
     }
 
     // deceleration
     Trajectory candidate_trajectory_dec = splineTrajectoryGen(best_trajectory.ref_vel - speed_up, goal_lane);
     if (candidate_trajectory_dec.next_x_vals.size()!=0) {
-      cout << "dec " << endl;   
+      cout << "*************dec*************" << endl;   
       final_trajectories.push_back(candidate_trajectory_dec);
-      cost = calculateCost(sensor_fusion, candidate_trajectory_dec);
+      cost = calculateCost(candidate_trajectory_dec);
       costs.push_back(cost);
     }
   }
@@ -174,9 +194,9 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
   
 
   // add long-distance anchor points
-  vector<double> next_wp0 = getXY(car_s + 40, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-  vector<double> next_wp1 = getXY(car_s + 80, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-  vector<double> next_wp2 = getXY(car_s + 120, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+  vector<double> next_wp0 = getXY(car_s + 50, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+  vector<double> next_wp1 = getXY(car_s + 70, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+  vector<double> next_wp2 = getXY(car_s + 90, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
   ptsx.push_back(next_wp0[0]);
   ptsx.push_back(next_wp1[0]);
@@ -208,7 +228,6 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
 
   double x_add_on = 0;
 
-  double horizon = 2;
   for (int i =1; i<= (horizon*50-prev_size);++i) {
 
   	double N = (target_dist/(.02*goal_vel/2.24));
@@ -233,27 +252,76 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
   return spline_trajectory;
 }
 
-double Vehicle::calculateCost(const vector<vector<double>> &sensor_fusion, Trajectory candidate_trajectory) {
+double Vehicle::calculateCost(const Trajectory &candidate_trajectory) {
 
   double cost_speed;
   double cost_change_lane;
-  double cost_safe_distance;
-  vector<double> weights = {0.5, 0.5, 0.5};
+  double cost_obstacle_avoidance;
+  double cost_traffic_jam;
+  vector<double> weights = {1, 0, 1, 10};
 
   // cost_speed
+  cost_speed = calculateCostSpeed(candidate_trajectory);
+  cout << "cost_speed " << cost_speed << endl;
+
+  // cost_change_lane
+  cost_change_lane = calculateCostChangeLane(candidate_trajectory);
+  cout << "cost_change_lane " << cost_change_lane << endl;  
+
+  // cost_safe_distance
+  cost_obstacle_avoidance = calculateCostObstacleAvoidance(candidate_trajectory);
+  cout << "cost_obstacle_avoidance " << cost_obstacle_avoidance << endl; 
+
+  // cost_traffic_jam
+  cost_traffic_jam = calculateCostTrafficJam(candidate_trajectory);
+  cout << "cost_traffic_jam " << cost_traffic_jam << endl;
+
+  // weighted_cost 
+  double weighted_cost = cost_speed * weights[0] + cost_change_lane * weights[1] + cost_obstacle_avoidance * weights[2] + cost_traffic_jam * weights[3];
+  cout << "weighted_cost " << weighted_cost << endl;
+  return weighted_cost;
+
+}
+
+double Vehicle::calculateCostSpeed(const Trajectory &candidate_trajectory) {
+  double cost_speed;
   double max_speed = 49.5;
   cost_speed = 1 - exp(- (max_speed - candidate_trajectory.ref_vel)/max_speed);
   if (candidate_trajectory.ref_vel >= max_speed) {
    cost_speed = 2;
   }
-  cout << "ref_vel" << candidate_trajectory.ref_vel << endl;
-  cout << "cost_speed " << cost_speed << endl;
+  return cost_speed;
+}
 
-  // cost_change_lane
+double Vehicle::calculateCostChangeLane(const Trajectory &candidate_trajectory) {
+  double cost_change_lane;
   cost_change_lane = 1 - exp(-candidate_trajectory.dist_lane_change / 4);
-  cout << "cost_change_lane " << cost_change_lane << endl;
+  return cost_change_lane;
+}
 
-  // cost_safe_distance
+double Vehicle::calculateCostObstacleAvoidance(const Trajectory &candidate_trajectory) {
+  double cost_safe_distance = 0.0;
+  double safe_distance = 3.0;
+  bool has_collision = false;
+  for (int i = 0; i < horizon * 50; ++i) {
+    double candidate_x = candidate_trajectory.next_x_vals[i];
+    double candidate_y = candidate_trajectory.next_y_vals[i];  
+    for (int j = 0; j < prediction.size(); ++j) {
+      if(distance(candidate_x, candidate_y, prediction[j].predicted_x[i], prediction[j].predicted_y[i]) <= safe_distance) {
+        has_collision = true;
+        cost_safe_distance = 100.0;
+        break;
+      }
+    }  
+    if (has_collision == true) {
+    	break;
+    }
+  }
+  return cost_safe_distance;
+}
+
+double Vehicle::calculateCostTrafficJam(const Trajectory &candidate_trajectory) {
+  double cost_traffic_jam; 
   int candidate_trajectory_size = candidate_trajectory.next_x_vals.size();
   double candidate_end_x = candidate_trajectory.next_x_vals[candidate_trajectory_size-1];
   double candidate_end_y = candidate_trajectory.next_y_vals[candidate_trajectory_size-1];
@@ -266,36 +334,27 @@ double Vehicle::calculateCost(const vector<vector<double>> &sensor_fusion, Traje
   double candidate_end_d = candidate_end_frenet[1];
   double candidate_end_lane = floor(candidate_end_d/4);
   
-  double min_distance = 99999.0;
-  for (int i = 0; i< sensor_fusion.size(); ++i) {
-
-  	float d = sensor_fusion[i][6];
-  	if( d<(2+4*candidate_end_lane+2) && d>(2+4*candidate_end_lane-2)) {
-  	  double vx = sensor_fusion[i][3];
-  	  double vy = sensor_fusion[i][4];
-  	  double check_speed = sqrt(vx*vx + vy*vy);
-  	  double check_car_s = sensor_fusion[i][5];
-
-  	  check_car_s += ((double)candidate_trajectory_size*.02*check_speed);
-
-  	  if (check_car_s > candidate_end_s) {
-        if ((check_car_s-candidate_end_s) < min_distance) {
-        	min_distance = check_car_s-candidate_end_s;
-        }
-  	  }
-    }
-  }
-  
-  double safe_distance = 80;
-  cost_safe_distance = 1 - exp(-safe_distance/min_distance);
-  if (min_distance <= safe_distance) {
-  	cost_safe_distance = 4;
+  double distance_ahead = 99999.0;
+  for (int i = 0; i < prediction.size() ; ++i) {
+    if( prediction[i].final_d<(2+4*candidate_end_lane+2) && prediction[i].final_d >(2+4*candidate_end_lane-2)) {
+  	  if ((prediction[i].final_s > candidate_end_s) && (prediction[i].start_s > car_s)) {
+        if ((prediction[i].final_s-candidate_end_s) < distance_ahead) {
+        	distance_ahead = prediction[i].final_s - candidate_end_s;
+        }      
+      }
+  	}
   }
 
-  cout << "safe_distance" << cost_safe_distance << endl;
+  cout << "distance_ahead " << distance_ahead << endl;
+  double following_min_distance = 5;
+  double following_distance = 10;
+  if (distance_ahead > following_distance) {
+    cost_traffic_jam = 0;
+  }
+  else {
+    cost_traffic_jam = 1.0/pow(following_min_distance - following_distance, 2) * pow(distance_ahead - following_distance, 2);
+  }
 
-  // weighted_cost 
-  double weighted_cost = cost_speed * weights[0] + cost_change_lane * weights[1] + cost_safe_distance * weights[2];
-  cout << "weighted_cost" << weighted_cost << endl;
-  return weighted_cost;
+
+  return cost_traffic_jam;
 }

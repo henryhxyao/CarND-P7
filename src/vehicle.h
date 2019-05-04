@@ -12,6 +12,15 @@ struct Trajectory {
   double dist_lane_change;
 };
 
+struct PredictedTrajectory {
+  int id;
+  vector<double> predicted_x;
+  vector<double> predicted_y;
+  double start_s;  
+  double final_s;
+  double final_d;
+};
+
 class Vehicle {
 public:
 
@@ -34,10 +43,24 @@ void setState(const double &input_car_x,
 			  const double &input_end_path_s,
 			  const double &input_end_path_d);
 
-void FSMPlanner(const vector<vector<double>> &sensor_fusion);
+void generatePrediction(const vector<vector<double>> &sensor_fusion);
+void FSMPlanner();
 vector<string> successorStates();
 Trajectory splineTrajectoryGen(double goal_vel, double goal_lane);
-double calculateCost(const vector<vector<double>> &sensor_fusion, Trajectory candidate_trajectory);
+
+// behavior cost functions
+double calculateCost(const Trajectory &candidate_trajectory);
+double calculateCostSpeed(const Trajectory &candidate_trajectory);
+double calculateCostChangeLane(const Trajectory &candidate_trajectory);
+double calculateCostObstacleAvoidance(const Trajectory &candidate_trajectory);
+double calculateCostTrafficJam(const Trajectory &candidate_trajectory);
+
+// waypoints info
+vector<double> map_waypoints_x;
+vector<double> map_waypoints_y;
+vector<double> map_waypoints_s;
+vector<double> map_waypoints_dx;
+vector<double> map_waypoints_dy;
 
 // vehicle current state
 double car_x;
@@ -46,6 +69,10 @@ double car_s;
 double car_d;
 double car_yaw;
 double car_speed;
+
+// current step prediction of surrounding vehicles
+double horizon = 3;
+vector<PredictedTrajectory> prediction;
 
 // previous path
 vector<double> previous_path_x;
@@ -56,13 +83,6 @@ double end_path_d;
 
 // best trajectory
 Trajectory best_trajectory;
-
-// waypoints info
-vector<double> map_waypoints_x;
-vector<double> map_waypoints_y;
-vector<double> map_waypoints_s;
-vector<double> map_waypoints_dx;
-vector<double> map_waypoints_dy;
 };
 
 #endif  //VEHICLE_H

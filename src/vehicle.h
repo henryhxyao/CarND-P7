@@ -2,12 +2,19 @@
 #define VEHICLE_H
 
 #include <vector>
+#include <fstream>
 using std::vector;
 using std::string;
 
 struct Trajectory {
+  // s,d trajectory
+  vector<double> next_s_vals;
+  vector<double> next_d_vals;
+
+  // x,y trajectory output to the simulator
   vector<double> next_x_vals;
   vector<double> next_y_vals;
+
   double ref_vel;
   double dist_lane_change;
 };
@@ -16,9 +23,8 @@ struct PredictedTrajectory {
   int id;
   vector<double> predicted_x;
   vector<double> predicted_y;
-  double start_s;  
-  double final_s;
-  double final_d;
+  vector<double> predicted_s;
+  vector<double> predicted_d;
 };
 
 class Vehicle {
@@ -45,8 +51,9 @@ void setState(const double &input_car_x,
 
 void generatePrediction(const vector<vector<double>> &sensor_fusion);
 void FSMPlanner();
-vector<string> successorStates();
+vector<string> successorStates();  // states of the Finite States Machine
 Trajectory splineTrajectoryGen(double goal_vel, double goal_lane);
+Trajectory quinticPolynomialTrajectoryGen(double goal_vel, double goal_lane);
 
 // behavior cost functions
 double calculateCost(const Trajectory &candidate_trajectory);
@@ -83,6 +90,10 @@ double end_path_d;
 
 // best trajectory
 Trajectory best_trajectory;
+
+std::ofstream myfile_xy;
+std::ofstream myfile_sd;
+
 };
 
 #endif  //VEHICLE_H

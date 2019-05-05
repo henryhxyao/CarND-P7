@@ -22,7 +22,7 @@ map_waypoints_y = std::move(input_map_waypoints_y);
 map_waypoints_s = std::move(input_map_waypoints_s);
 map_waypoints_dx = std::move(input_map_waypoints_dx);
 map_waypoints_dy = std::move(input_map_waypoints_dy);
-best_trajectory.ref_vel = 0.0;
+best_trajectory.ref_vel = 0;
 }
 
 void Vehicle::setState(const double &input_car_x,
@@ -63,19 +63,23 @@ void Vehicle::generatePrediction(const vector<vector<double>> &sensor_fusion) {
   	  double check_car_s = sensor_fusion[i][5];  
   	  float check_car_d = sensor_fusion[i][6];
   	  double check_speed = sqrt(vx*vx + vy*vy);
-      check_prediction.start_s = check_car_s;
 
       for(int i = 0; i < horizon*50; ++i) {
         double check_car_s_predict = check_car_s + (i * 0.02 * check_speed);
         vector<double> check_car_xy = getXY(check_car_s_predict, check_car_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
         check_prediction.predicted_x.push_back(check_car_xy[0]);
         check_prediction.predicted_y.push_back(check_car_xy[1]);
+		check_prediction.predicted_s.push_back(check_car_s_predict);
+		check_prediction.predicted_d.push_back(check_car_d);
       }
-      check_prediction.final_d = check_car_d;
-      check_prediction.final_s = check_car_s + ((horizon * 50-1) * 0.02 * check_speed);
       prediction.push_back(check_prediction);
     }
   }
+  //cout << "prediction info" << endl;
+  //cout << "x_size " << prediction[0].predicted_x.size() << endl;
+  //cout << "y_size " << prediction[0].predicted_y.size() << endl;
+  //cout << "s_size " << prediction[0].predicted_s.size() << endl;
+  //cout << "d_size " << prediction[0].predicted_d.size() << endl;
 }
 
 void Vehicle::FSMPlanner() {
@@ -104,7 +108,7 @@ void Vehicle::FSMPlanner() {
     cout << " " << endl;
     cout << "next_state " << candidate_states[i] << "/goal_lane " << goal_lane << endl;
     
-    double speed_up = 0.224;
+    double speed_up = 0.448;
     // acceleration
     Trajectory candidate_trajectory_acc = splineTrajectoryGen(best_trajectory.ref_vel + speed_up, goal_lane);
     if (candidate_trajectory_acc.next_x_vals.size()!=0) {
@@ -162,11 +166,10 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
   double ref_y = car_y;
   double ref_yaw = deg2rad(car_yaw);
 
-
   // if no previous path
   if(prev_size < 2){
-  	double prev_car_x = car_x - cos(car_yaw);
-  	double prev_car_y = car_y - sin(car_yaw);
+  	double prev_car_x = car_x - cos(ref_yaw);
+  	double prev_car_y = car_y - sin(ref_yaw);
 
   	ptsx.push_back(prev_car_x);
   	ptsx.push_back(car_x);
@@ -192,7 +195,6 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
 	ptsy.push_back(ref_y);
   }
   
-
   // add long-distance anchor points
   vector<double> next_wp0 = getXY(car_s + 50, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
   vector<double> next_wp1 = getXY(car_s + 70, 2+4*goal_lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
@@ -205,8 +207,10 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
   ptsy.push_back(next_wp0[1]);
   ptsy.push_back(next_wp1[1]);
   ptsy.push_back(next_wp2[1]);
-
-
+  //for (int i = 0; i < ptsy.size(); ++i) {
+  //	cout << ptsx[i] << "/" << ptsy[i] << endl;
+  //}
+ 
   // transform to vehicle coordinates system
   for(int i =0; i<ptsx.size();++i){
   	double shift_x = ptsx[i]-ref_x;
@@ -228,7 +232,7 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
 
   double x_add_on = 0;
 
-  for (int i =1; i<= (horizon*50-prev_size);++i) {
+  for (int i = 1; i<= (horizon*50-prev_size);++i) {
 
   	double N = (target_dist/(.02*goal_vel/2.24));
   	double x_point = x_add_on + target_x/N;
@@ -249,7 +253,38 @@ Trajectory Vehicle::splineTrajectoryGen(double goal_vel, double goal_lane) {
   	spline_trajectory.next_y_vals.push_back(y_point);
   }
 
+  // convert x,y trajectory to s,d trajectory
+  double theta;
+  for (int i = 0; i < horizon * 50 - 1; ++i) {
+	  double spline_x = spline_trajectory.next_x_vals[i];
+	  double spline_y = spline_trajectory.next_y_vals[i];
+	  double spline_next_x = spline_trajectory.next_x_vals[i+1];
+	  double spline_next_y = spline_trajectory.next_y_vals[i + 1];
+	  theta = atan2(spline_next_y - spline_y, spline_next_x - spline_x);
+	  vector<double> spline_frenet = getFrenet(spline_x, spline_y, theta, map_waypoints_x, map_waypoints_y);
+	  spline_trajectory.next_s_vals.push_back(spline_frenet[0]);
+	  spline_trajectory.next_d_vals.push_back(spline_frenet[1]);
+  }
+  vector<double> spline_end_frenet = getFrenet(spline_trajectory.next_x_vals.back(), spline_trajectory.next_y_vals.back(), theta, map_waypoints_x, map_waypoints_y);
+  spline_trajectory.next_s_vals.push_back(spline_end_frenet[0]);
+  spline_trajectory.next_d_vals.push_back(spline_end_frenet[1]);
+
+  //cout << "candidate trajectory info" << endl;
+  //cout << "x_size " << spline_trajectory.next_x_vals.size() << endl;
+  //cout << "y_size " << spline_trajectory.next_y_vals.size() << endl;
+  //cout << "s_size " << spline_trajectory.next_s_vals.size() << endl;
+  //cout << "d_size " << spline_trajectory.next_d_vals.size() << endl;
+
+//  for (int i = 0; i < horizon * 50; ++i) {
+//	  myfile_xy << spline_trajectory.next_x_vals[i] << " " << spline_trajectory.next_y_vals[i] << endl;
+//	  myfile_sd << spline_trajectory.next_d_vals[i] << " " << spline_trajectory.next_s_vals[i] << endl;
+//  }
   return spline_trajectory;
+}
+
+Trajectory Vehicle::quinticPolynomialTrajectoryGen(double goal_vel, double goal_lane) {
+	Trajectory quinticPolynomial;
+	return quinticPolynomial;
 }
 
 double Vehicle::calculateCost(const Trajectory &candidate_trajectory) {
@@ -258,26 +293,26 @@ double Vehicle::calculateCost(const Trajectory &candidate_trajectory) {
   double cost_change_lane;
   double cost_obstacle_avoidance;
   double cost_traffic_jam;
-  vector<double> weights = {1, 0, 1, 10};
+  vector<double> weights = {1, 0.001, 1, 0.5};
 
   // cost_speed
-  cost_speed = calculateCostSpeed(candidate_trajectory);
+  cost_speed = weights[0] * calculateCostSpeed(candidate_trajectory);
   cout << "cost_speed " << cost_speed << endl;
 
   // cost_change_lane
-  cost_change_lane = calculateCostChangeLane(candidate_trajectory);
+  cost_change_lane = weights[1] * calculateCostChangeLane(candidate_trajectory);
   cout << "cost_change_lane " << cost_change_lane << endl;  
 
   // cost_safe_distance
-  cost_obstacle_avoidance = calculateCostObstacleAvoidance(candidate_trajectory);
+  cost_obstacle_avoidance = weights[2] * calculateCostObstacleAvoidance(candidate_trajectory);
   cout << "cost_obstacle_avoidance " << cost_obstacle_avoidance << endl; 
 
   // cost_traffic_jam
-  cost_traffic_jam = calculateCostTrafficJam(candidate_trajectory);
+  cost_traffic_jam = weights[3] * calculateCostTrafficJam(candidate_trajectory);
   cout << "cost_traffic_jam " << cost_traffic_jam << endl;
 
   // weighted_cost 
-  double weighted_cost = cost_speed * weights[0] + cost_change_lane * weights[1] + cost_obstacle_avoidance * weights[2] + cost_traffic_jam * weights[3];
+  double weighted_cost = cost_speed + cost_change_lane + cost_obstacle_avoidance + cost_traffic_jam;
   cout << "weighted_cost " << weighted_cost << endl;
   return weighted_cost;
 
@@ -301,18 +336,22 @@ double Vehicle::calculateCostChangeLane(const Trajectory &candidate_trajectory) 
 
 double Vehicle::calculateCostObstacleAvoidance(const Trajectory &candidate_trajectory) {
   double cost_safe_distance = 0.0;
-  double safe_distance = 3.0;
+  double safe_lateral_distance = 2.0;
+  double safe_longitudinal_distance = 6.0;
   bool has_collision = false;
   for (int i = 0; i < horizon * 50; ++i) {
-    double candidate_x = candidate_trajectory.next_x_vals[i];
-    double candidate_y = candidate_trajectory.next_y_vals[i];  
+    double candidate_s = candidate_trajectory.next_s_vals[i];
+    double candidate_d = candidate_trajectory.next_d_vals[i];  
     for (int j = 0; j < prediction.size(); ++j) {
-      if(distance(candidate_x, candidate_y, prediction[j].predicted_x[i], prediction[j].predicted_y[i]) <= safe_distance) {
+      if((candidate_d <= (prediction[j].predicted_d[i] + safe_lateral_distance)) && 
+		  (candidate_d >= (prediction[j].predicted_d[i] - safe_lateral_distance)) && 
+          (candidate_s <= (prediction[j].predicted_s[i] + safe_longitudinal_distance)) &&
+		  (candidate_s >= (prediction[j].predicted_s[i] - safe_longitudinal_distance))) {
         has_collision = true;
-        cost_safe_distance = 100.0;
+        cost_safe_distance = 99999.0;
         break;
       }
-    }  
+	}  
     if (has_collision == true) {
     	break;
     }
@@ -322,39 +361,24 @@ double Vehicle::calculateCostObstacleAvoidance(const Trajectory &candidate_traje
 
 double Vehicle::calculateCostTrafficJam(const Trajectory &candidate_trajectory) {
   double cost_traffic_jam; 
-  int candidate_trajectory_size = candidate_trajectory.next_x_vals.size();
-  double candidate_end_x = candidate_trajectory.next_x_vals[candidate_trajectory_size-1];
-  double candidate_end_y = candidate_trajectory.next_y_vals[candidate_trajectory_size-1];
-  double candidate_end_prev_x = candidate_trajectory.next_x_vals[candidate_trajectory_size-2];
-  double candidate_end_prev_y = candidate_trajectory.next_y_vals[candidate_trajectory_size-2];
-  double theta = atan2(candidate_end_y - candidate_end_prev_y, candidate_end_x - candidate_end_prev_x);
-
-  vector<double> candidate_end_frenet = getFrenet(candidate_end_x, candidate_end_y, theta, map_waypoints_x, map_waypoints_y);
-  double candidate_end_s = candidate_end_frenet[0];
-  double candidate_end_d = candidate_end_frenet[1];
+  double candidate_end_s = candidate_trajectory.next_s_vals.back();
+  double candidate_end_d = candidate_trajectory.next_d_vals.back();
   double candidate_end_lane = floor(candidate_end_d/4);
   
-  double distance_ahead = 99999.0;
+  double distance_ahead = 100.0;
   for (int i = 0; i < prediction.size() ; ++i) {
-    if( prediction[i].final_d<(2+4*candidate_end_lane+2) && prediction[i].final_d >(2+4*candidate_end_lane-2)) {
-  	  if ((prediction[i].final_s > candidate_end_s) && (prediction[i].start_s > car_s)) {
-        if ((prediction[i].final_s-candidate_end_s) < distance_ahead) {
-        	distance_ahead = prediction[i].final_s - candidate_end_s;
+    if( prediction[i].predicted_d.back()<(2+4*candidate_end_lane+2) && prediction[i].predicted_d.back() >(2+4*candidate_end_lane-2)) {
+  	  if ((prediction[i].predicted_s.back() > candidate_end_s) && (prediction[i].predicted_s[0] > car_s)) {
+        if ((prediction[i].predicted_s.back() - candidate_end_s) < distance_ahead) {
+        	distance_ahead = prediction[i].predicted_s.back() - candidate_end_s;
         }      
       }
   	}
   }
 
   cout << "distance_ahead " << distance_ahead << endl;
-  double following_min_distance = 5;
-  double following_distance = 10;
-  if (distance_ahead > following_distance) {
-    cost_traffic_jam = 0;
-  }
-  else {
-    cost_traffic_jam = 1.0/pow(following_min_distance - following_distance, 2) * pow(distance_ahead - following_distance, 2);
-  }
-
+  double following_distance = 100;
+  cost_traffic_jam = 1.0/pow(following_distance, 2) * pow(distance_ahead - following_distance, 2);
 
   return cost_traffic_jam;
 }

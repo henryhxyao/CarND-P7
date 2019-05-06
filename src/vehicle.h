@@ -15,7 +15,6 @@ struct Trajectory {
   vector<double> next_x_vals;
   vector<double> next_y_vals;
 
-  double ref_vel;
   double dist_lane_change;
 };
 
@@ -52,12 +51,11 @@ void setState(const double &input_car_x,
 void generatePrediction(const vector<vector<double>> &sensor_fusion);
 void FSMPlanner();
 vector<string> successorStates();  // states of the Finite States Machine
-Trajectory splineTrajectoryGen(double goal_vel, double goal_lane);
+Trajectory splineTrajectoryGen(double goal_vel, vector<double> anchor_waypoint_lane, vector<double> anchor_waypoint_s);
 Trajectory quinticPolynomialTrajectoryGen(double goal_vel, double goal_lane);
 
 // behavior cost functions
 double calculateCost(const Trajectory &candidate_trajectory);
-double calculateCostSpeed(const Trajectory &candidate_trajectory);
 double calculateCostChangeLane(const Trajectory &candidate_trajectory);
 double calculateCostObstacleAvoidance(const Trajectory &candidate_trajectory);
 double calculateCostTrafficJam(const Trajectory &candidate_trajectory);
@@ -78,7 +76,7 @@ double car_yaw;
 double car_speed;
 
 // current step prediction of surrounding vehicles
-double horizon = 3;
+double horizon = 5;
 vector<PredictedTrajectory> prediction;
 
 // previous path
@@ -90,9 +88,11 @@ double end_path_d;
 
 // best trajectory
 Trajectory best_trajectory;
+double ref_vel = 0.2;
+double max_vel = 22.0; // 49.2mph
 
-std::ofstream myfile_xy;
-std::ofstream myfile_sd;
+//std::ofstream myfile_xy;
+//std::ofstream myfile_sd;
 
 };
 

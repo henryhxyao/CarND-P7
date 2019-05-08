@@ -7,6 +7,9 @@ using std::vector;
 using std::string;
 
 struct Trajectory {
+  // action_name
+  string action;
+  
   // s,d trajectory
   vector<double> next_s_vals;
   vector<double> next_d_vals;
@@ -15,13 +18,12 @@ struct Trajectory {
   vector<double> next_x_vals;
   vector<double> next_y_vals;
 
+  double target_lane;
   double dist_lane_change;
 };
 
 struct PredictedTrajectory {
   int id;
-  vector<double> predicted_x;
-  vector<double> predicted_y;
   vector<double> predicted_s;
   vector<double> predicted_d;
 };
@@ -51,14 +53,14 @@ void setState(const double &input_car_x,
 void generatePrediction(const vector<vector<double>> &sensor_fusion);
 void FSMPlanner();
 vector<string> successorStates();  // states of the Finite States Machine
-Trajectory splineTrajectoryGen(double goal_vel, vector<double> anchor_waypoint_lane, vector<double> anchor_waypoint_s);
-Trajectory quinticPolynomialTrajectoryGen(double goal_vel, double goal_lane);
+Trajectory splineTrajectoryGen(const double goal_vel, const string action, const vector<double> &anchor_waypoint_lane, const vector<double> &anchor_waypoint_s);
+//Trajectory quinticPolynomialTrajectoryGen(double goal_vel, double goal_lane);
 
 // behavior cost functions
 double calculateCost(const Trajectory &candidate_trajectory);
-double calculateCostChangeLane(const Trajectory &candidate_trajectory);
 double calculateCostObstacleAvoidance(const Trajectory &candidate_trajectory);
 double calculateCostTrafficJam(const Trajectory &candidate_trajectory);
+//double calculateCostComfort(const Trajectory &candidate_trajectory);
 
 // waypoints info
 vector<double> map_waypoints_x;
@@ -76,8 +78,9 @@ double car_yaw;
 double car_speed;
 
 // current step prediction of surrounding vehicles
-double horizon = 5;
+double horizon = 3;
 vector<PredictedTrajectory> prediction;
+vector<double> distances_ahead;
 
 // previous path
 vector<double> previous_path_x;
@@ -90,9 +93,6 @@ double end_path_d;
 Trajectory best_trajectory;
 double ref_vel = 0.2;
 double max_vel = 22.0; // 49.2mph
-
-//std::ofstream myfile_xy;
-//std::ofstream myfile_sd;
 
 };
 

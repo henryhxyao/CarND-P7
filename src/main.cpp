@@ -104,9 +104,9 @@ int main() {
 
           agent.FSMPlanner();
           
-          // use the first 1 second trajectory from the best trajectory
-          vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 50);
-          vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.best_trajectory.next_y_vals.cbegin() + 50);
+          // use the first 0.5 second trajectory from the best trajectory
+          vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 25);
+          vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.best_trajectory.next_y_vals.cbegin() + 25);
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;

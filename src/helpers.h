@@ -154,4 +154,44 @@ inline vector<double> getXY(double s, double d, const vector<double> &maps_s,
   return {x,y};
 }
 
+inline vector<double> fuzzyDistance(vector<double> distance) {
+  double diff = 20.0;
+  vector<double> fuzzy_distance;
+  int is_near_01 = (fabs(distance[0]-distance[1]) < diff) ? 1 : 0;
+  int is_near_02 = (fabs(distance[0]-distance[2]) < diff) ? 1 : 0;
+  int is_near_12 = (fabs(distance[1]-distance[2]) < diff) ? 1 : 0;
+
+  // all three distances are near
+  if ((is_near_01+is_near_02+is_near_12)>1) {
+    double average_distance = (distance[0] + distance[1] + distance[2])/3;
+    fuzzy_distance.push_back(average_distance);
+    fuzzy_distance.push_back(average_distance);
+    fuzzy_distance.push_back(average_distance);   
+  }    
+  else if (is_near_01 == 1) {
+    double average_distance_01 = (distance[0] + distance[1])/2;
+    fuzzy_distance.push_back(average_distance_01);  
+    fuzzy_distance.push_back(average_distance_01); 
+    fuzzy_distance.push_back(distance[2]);   
+  }
+  else if (is_near_02 == 1) {
+    double average_distance_02 = (distance[0] + distance[2])/2;
+    fuzzy_distance.push_back(average_distance_02); 
+    fuzzy_distance.push_back(distance[1]);
+    fuzzy_distance.push_back(average_distance_02); 
+  }
+  else if (is_near_12 == 1) {
+    double average_distance_12 = (distance[1] + distance[2])/2;
+    fuzzy_distance.push_back(distance[0]);
+    fuzzy_distance.push_back(average_distance_12); 
+    fuzzy_distance.push_back(average_distance_12); 
+  }  
+  else {
+    fuzzy_distance.push_back(distance[0]);
+    fuzzy_distance.push_back(distance[1]);
+    fuzzy_distance.push_back(distance[2]);      
+  }
+  return fuzzy_distance;
+}
+
 #endif  // HELPERS_H

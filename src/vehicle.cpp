@@ -155,25 +155,8 @@ void Vehicle::FSMPlanner() {
   vector<float> costs;
   vector<Trajectory> final_trajectories;
   double current_lane = floor(car_d/4);
-
-/*
-  if (((car_d >= 3)&&(car_d <= 5)) || ((car_d >= 7)&&(car_d <= 9))) {
-    // when the car ride on the line, do not plan but follow the previous best_trajectory
-		int used_size = 50 - previous_path_x.size();
-		vector<double> new_next_s_vals(best_trajectory.next_s_vals.cbegin()+used_size, best_trajectory.next_s_vals.cend());
-		vector<double> new_next_d_vals(best_trajectory.next_d_vals.cbegin()+used_size, best_trajectory.next_d_vals.cend());
-		vector<double> new_next_x_vals(best_trajectory.next_x_vals.cbegin()+used_size, best_trajectory.next_x_vals.cend());
-		vector<double> new_next_y_vals(best_trajectory.next_y_vals.cbegin()+used_size, best_trajectory.next_y_vals.cend());				
-		best_trajectory.next_s_vals = std::move(new_next_s_vals);
-		best_trajectory.next_d_vals = std::move(new_next_d_vals);
-		best_trajectory.next_x_vals = std::move(new_next_x_vals);
-		best_trajectory.next_y_vals = std::move(new_next_y_vals);		
-
-  }
-  else {
-*/
   
-	for(int i = 0; i < candidate_states.size(); ++i) {
+  for(int i = 0; i < candidate_states.size(); ++i) {
   	vector<double> anchor_waypoint_lane;
   	vector<double> anchor_waypoint_s;
     if (candidate_states[i] == "KL") {
@@ -240,7 +223,6 @@ void Vehicle::FSMPlanner() {
   	max_vel = 5.0;
   }
   
-
   auto best_cost = std::min_element(costs.cbegin(), costs.cend());
   int best_idx = std::distance(costs.cbegin(), best_cost);  
   best_trajectory = std::move(final_trajectories[best_idx]);
@@ -326,7 +308,6 @@ Trajectory Vehicle::splineTrajectoryGen(const double goal_vel, const string acti
   Trajectory spline_trajectory;
   spline_trajectory.action = action;
   spline_trajectory.target_lane = anchor_waypoint_lane.back();
-  spline_trajectory.dist_lane_change = std::abs(2 + 4 * anchor_waypoint_lane[2] - car_d);
 
   // define container for spline curve anchor points
   vector<double> ptsx;
@@ -450,7 +431,6 @@ double Vehicle::calculateCost(const Trajectory &candidate_trajectory) {
 
   double cost_obstacle_avoidance;
   double cost_traffic_jam;
-  //double cost_comfort;
   vector<double> weights = {1, 3};
 
   // cost_obstacle_avoidance
@@ -461,12 +441,6 @@ double Vehicle::calculateCost(const Trajectory &candidate_trajectory) {
 
   cost_traffic_jam = weights[1] * calculateCostTrafficJam(candidate_trajectory);
   cout << "cost_traffic_jam " << cost_traffic_jam << endl;
-
-  /*
-  // cost_comfort
-  cost_comfort = weights[2] * calculateCostComfort(candidate_trajectory);
-  cout << "cost_comfort " << cost_comfort << endl;
-  */
 
   // weighted_cost 
   double weighted_cost = cost_obstacle_avoidance + cost_traffic_jam;

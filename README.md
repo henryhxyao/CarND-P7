@@ -143,3 +143,70 @@ still be compilable with cmake and make./
 ## How to write a README
 A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
 
+## Model Explanation
+### Overview
+
+A class named "Vehicle" (which is defined in "vehicle.cpp" and "vehicle.h") is created to store all the useful information and define all the behaviors of the main vehicle.
+
+Then in the main(), the following steps are taken: 
+1. an Vehicle object "agent" is declared and the map_waypoints info is stored in "agent". 
+"main.cpp" line 57:
+```c++
+Vehicle agent(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
+```
+2. After the main car's localization and sensor fusion data are received, store these data in "agent".
+"main.cpp" line 95:
+```c++
+agent.setState(j[1]["x"], j[1]["y"], j[1]["s"], j[1]["d"], j[1]["yaw"], j[1]["speed"], j[1]["previous_path_x"], j[1]["previous_path_y"], j[1]["end_path_s"], j[1]["end_path_d"]);
+```
+3. Using the sensor fusion data, the "agent" predicts the trajectory of other vehicles in the time horizon of 3s.
+"main.cpp" line 103:
+```c++
+agent.generatePrediction(sensor_fusion);
+```
+4. The "agent" generate the best trajectory of time horizon = 3s  
+"main.cpp" line 105:
+```c++
+agent.FSMPlanner();
+```
+5. Only output the first 0.5 second trajectory to the simulator and throw away the next 2.5 seconds motion in the best_trajectory
+"main.cpp" line 108-109:
+```c++
+vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 25);
+vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.best_trajectory.next_y_vals.cbegin() + 25);
+```
+
+### Prediction
+
+
+
+
+
+
+
+
+### PLanner
+#### generate successor states
+
+
+
+
+
+#### generate trajectory
+
+
+
+
+#### cost design 
+
+
+
+
+### Performance
+
+
+
+
+### Further improvements
+
+

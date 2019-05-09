@@ -13,13 +13,11 @@ struct Trajectory {
   // s,d trajectory
   vector<double> next_s_vals;
   vector<double> next_d_vals;
+  double target_lane;  
 
   // x,y trajectory output to the simulator
   vector<double> next_x_vals;
   vector<double> next_y_vals;
-
-  double target_lane;
-  double dist_lane_change;
 };
 
 struct PredictedTrajectory {
@@ -30,15 +28,17 @@ struct PredictedTrajectory {
 
 class Vehicle {
 public:
-
+// constructor
 Vehicle(const vector<double> &input_map_waypoints_x,
 		const vector<double> &input_map_waypoints_y,
 		const vector<double> &input_map_waypoints_s,
 		const vector<double> &input_map_waypoints_dx,
 		const vector<double> &input_map_waypoints_dy);
 
+// deconstructor
 virtual ~Vehicle(){};
 
+// store the vehicle related information in the class
 void setState(const double &input_car_x,
 			  const double &input_car_y,
 			  const double &input_car_s,
@@ -50,10 +50,24 @@ void setState(const double &input_car_x,
 			  const double &input_end_path_s,
 			  const double &input_end_path_d);
 
+// generate motion predictions of the vehicles within 120 meters
 void generatePrediction(const vector<vector<double>> &sensor_fusion);
+
+// plan the motion and generate the best_trajectory
 void FSMPlanner();
+
+// best trajectory
+Trajectory best_trajectory;
+
+
+private:
+// generate the successor states from the current state
 vector<string> successorStates();  // states of the Finite States Machine
+
+// generate the spline trajectory 
 Trajectory splineTrajectoryGen(const double goal_vel, const string action, const vector<double> &anchor_waypoint_lane, const vector<double> &anchor_waypoint_s);
+
+// generate the quintic polynomial trajectory
 //Trajectory quinticPolynomialTrajectoryGen(double goal_vel, double goal_lane);
 
 // behavior cost functions
@@ -89,11 +103,9 @@ int prev_size;
 double end_path_s;
 double end_path_d;
 
-// best trajectory
-Trajectory best_trajectory;
+// max velocity and reference velocity
 double ref_vel = 0.2;
 double max_vel = 22.0; // 49.2mph
-
 };
 
 #endif  //VEHICLE_H

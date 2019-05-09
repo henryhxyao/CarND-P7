@@ -277,7 +277,7 @@ if there is only one trajectory that can be selected and also has collision whic
 If the reference velocity `ref_vel` is lower than max velocity `max_vel`, then add 0.2 to the `ref_vel`; otherwise if the reference velocity `ref_vel` is larger than max velocity `max_vel`, then minus 0.2 from the `ref_vel`;
 
 ### Performance
-The above proposed planning algorithm achieved a best distance without incident of 61.27miles on my local machine, and average distance between two accidents is about 30 miles. The screenshot of the best test is shown below:
+The above proposed planning algorithm achieved a best distance without incident of 61.27miles on my local machine, and average distance between two accidents is about 22 miles. The screenshot of the best test is shown below:
 ![alt text][image1]
 
 ### Further improvements

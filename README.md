@@ -259,6 +259,7 @@ However, this cost function design can lead to rapid decision change when any tw
 | t0 | {15, 12, 16} | 2 |
 | t1 | {15, 12, 14} | 0 |
 | t2 | {15, 12, 16} | 2 |
+
 then the main vehicle will drive to the 2-th lane, back to the 0-th lane, and then to the 2-th lane within 2 seconds. This behavior definitely will cause large acceleration and jerk which is not wanted.
 
 Though an additional cost function for comfort can be added to punish the bahavior with quick decision change. Here, I introduce a fuzzyDistance function (**"helpers.h" line 157-194**) to sort of filter the distance_ahead. If the difference between any two distances in distances_ahead is less than 20m, then they are regarded as belonging to the same distance group. The distances in the same distance group are averaged. For example, {15, 12, 16}->{14.33, 14.33, 14.33}, {120, 110, 40}-{115, 115, 40}. I found this method can increase the robustness of the planning algorithm and avoid unnecessary lane change. The philosophy behind this fuzzyDistance function is also similar to human driver's decision making process that the human drivers will wait and not do lane change until the advantage of changing lane is large enough.

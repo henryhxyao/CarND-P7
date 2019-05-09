@@ -182,6 +182,7 @@ A simple linear model (the vehicle's speed and lateral positon `check_car_d` are
 1. Set max velocity `max_vel` to be 22m/s (equals to 49.2mph which is within the speed limit);
 2. If `following_distance` is less than 30m and the current trajectory is keeping lane, then set `max_vel` to be `vel_ahead`-2; 
 3. If `following_distance` is less than 10m which indicates potential danger, then set `max_vel` to be `vel_ahead`-5;
+
 2 and 3 are used to keep enough space between the main vehicle to the vehicle ahead.
 
 #### 3. Generate distances ahead on each lane: **"vehicle.cpp" line 116-150**

@@ -219,7 +219,7 @@ void Vehicle::FSMPlanner() {
     }
   }
   
-  // if the only trajectory has collision which indicates emergency, set max_vel to 0
+  // if the only trajectory has collision which indicates emergency, set max_vel to a low value, 5.0
   if ((costs.size() == 1) && (costs[0] > 99998.0)) {
   	max_vel = 5.0;
   }
@@ -336,7 +336,7 @@ Trajectory Vehicle::splineTrajectoryGen(const double goal_vel, const string acti
   	ref_x = previous_path_x[prev_size-1];
   	ref_y = previous_path_y[prev_size-1];
 	
-	double ref_x_prev = previous_path_x[prev_size-2];
+	  double ref_x_prev = previous_path_x[prev_size-2];
   	double ref_y_prev = previous_path_y[prev_size-2];
   	ref_yaw = atan2(ref_y-ref_y_prev,ref_x-ref_x_prev);
    
@@ -344,7 +344,7 @@ Trajectory Vehicle::splineTrajectoryGen(const double goal_vel, const string acti
   	ptsx.push_back(ref_x);
 
   	ptsy.push_back(ref_y_prev);
-	ptsy.push_back(ref_y);
+	  ptsy.push_back(ref_y);
   }
   
   // add long-distance anchor points

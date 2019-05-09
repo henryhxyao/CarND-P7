@@ -208,6 +208,7 @@ Two constraints on the states are used:
 1. The vehicle cannot choose actions that leads the vehicle out of the lanes: "vehicle.cpp" line 248-262
 
 To be specific, when the main vehicle is on lane0, then it can only choose "KL","LCR","PLCR";  when the main vehicle is on lane1, then it can only choose "KL","LCR","LCL"; when the main vehicle is on lane2, then it can only choose "KL","LCL","PLCL"; 
+
 2. To avoid the accelerations and jerks of the planned trajectories getting to large, the following state transitions are not allowed: "vehicle.cpp" line 264-306
 * LCL <-> LCR
 * LCL <-> PLCR

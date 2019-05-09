@@ -183,17 +183,16 @@ vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.bes
 
 ### Prediction
 
-#### generate prediction "vehicle.cpp" line 53-94
-
+#### generate prediction: "vehicle.cpp" line 53-94
 A simple linear model (the vehicle's speed and lateral positon check_car_d are constant) is used to generate motion prediction, `predicted_s` and `predicted_d` for the vehicles within 120m around the main vehicle. Meanwhile, check if there is a vehicle on the same lane with the main vehicle within the distance of 30m. If so, record its distance to the main vehicle as `following_distance` and its velocity as `vel_ahead`.
 
-#### update max velocity "vehicle.cpp" line 96-114
+#### update max velocity: "vehicle.cpp" line 96-114
 1. set max velocity `max_vel` to be 22m/s (equals to 49.2mph which is within speed limit);
 2. if `following_distance` is less than 30m and the current trajectory is keeping lane, then set `max_vel` to be `vel_ahead`-2; 
 3. if `following_distance` is less than 10m which indicates potential danger, then set `max_vel` to be `vel_ahead`-5;
 2 and 3 are used to keep enough space between the vehicle ahead.
 
-#### generate distance_ahead on each lane "vehicle.cpp" line 116-150
+#### generate distance_ahead on each lane: "vehicle.cpp" line 116-150
 
 To measure which lane is currently free of traffic, calculate the longitudinal distance of the nearest vehicle ahead on each lane to the main vehicle and store these distances as `distances_ahead`. These values are used in the cost calucation function.
 

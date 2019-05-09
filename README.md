@@ -151,23 +151,23 @@ A well written README file can enhance your project and portfolio.  Develop your
 A class named `Vehicle` (which is defined in "vehicle.cpp" and "vehicle.h") is created to store all the useful information and define all the behaviors of the main vehicle.
 
 Then in the main(), the following steps are taken: 
-1. An `Vehicle` object `agent` is declared and the map_waypoints info is stored in `agent`： **"main.cpp" line 57**
+* An `Vehicle` object `agent` is declared and the map_waypoints info is stored in `agent`： **"main.cpp" line 57**
 ```c++
 Vehicle agent(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 ```
-2. After the main car's localization and sensor fusion data are received, store these data in `agent`： **"main.cpp" line 95**
+* After the main car's localization and sensor fusion data are received, store these data in `agent`： **"main.cpp" line 95**
 ```c++
 agent.setState(j[1]["x"], j[1]["y"], j[1]["s"], j[1]["d"], j[1]["yaw"], j[1]["speed"], j[1]["previous_path_x"], j[1]["previous_path_y"], j[1]["end_path_s"], j[1]["end_path_d"]);
 ```
-3. Using the sensor fusion data, the `agent` predicts the trajectory of other vehicles in the time horizon of 3s： **"main.cpp" line 103**
+* Using the sensor fusion data, the `agent` predicts the trajectory of other vehicles in the time horizon of 3s： **"main.cpp" line 103**
 ```c++
 agent.generatePrediction(sensor_fusion);
 ```
-4. The `agent` generates the best trajectory in the time horizon = 3s ： **"main.cpp" line 105**
+* The `agent` generates the best trajectory in the time horizon = 3s ： **"main.cpp" line 105**
 ```c++
 agent.FSMPlanner();
 ```
-5. The `agent` only outputs the first 0.5 second trajectory to the simulator and throws away the next 2.5 seconds motion in the best_trajectory： **"main.cpp" line 108-109**
+* The `agent` only outputs the first 0.5 second trajectory to the simulator and throws away the next 2.5 seconds motion in the best_trajectory： **"main.cpp" line 108-109**
 ```c++
 vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 25);
 vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.best_trajectory.next_y_vals.cbegin() + 25);
@@ -175,28 +175,29 @@ vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.bes
 
 ### Prediction
 
-#### Generate prediction: **"vehicle.cpp" line 53-94**
+#### 1. Generate prediction: **"vehicle.cpp" line 53-94**
 A simple linear model (the vehicle's speed and lateral positon `check_car_d` are constant) is used to generate motion prediction `predicted_s` and `predicted_d` for the vehicles within 120m around the main vehicle. Meanwhile, check if there is a vehicle on the same lane with the main vehicle within the distance of 30m. If so, record its distance to the main vehicle as `following_distance` and its velocity as `vel_ahead`.
 
-#### Update max velocity: **"vehicle.cpp" line 96-114**
+#### 2. Update max velocity: **"vehicle.cpp" line 96-114**
 1. Set max velocity `max_vel` to be 22m/s (equals to 49.2mph which is within the speed limit);
 2. If `following_distance` is less than 30m and the current trajectory is keeping lane, then set `max_vel` to be `vel_ahead`-2; 
 3. If `following_distance` is less than 10m which indicates potential danger, then set `max_vel` to be `vel_ahead`-5;
 2 and 3 are used to keep enough space between the main vehicle to the vehicle ahead.
 
-#### Generate distances ahead on each lane: **"vehicle.cpp" line 116-150**
+#### 3. Generate distances ahead on each lane: **"vehicle.cpp" line 116-150**
 To measure which lane is currently free of traffic, calculate the longitudinal distance of the nearest vehicle ahead on each lane (lane0, lane1, lane2) to the main vehicle and store these three distances as `distances_ahead`. These values are used in the cost calculation function.
 
 ### Planner
-#### generate successor states:
-1. A finite state machine of 5 states are used:
+#### 1. Generate successor states:
+
+A finite state machine of 5 states are used:
 * KL: keep lane;
 * LCL: lane change left;
 * PLCL: prepare lane change left. the vehicle first change to lane 1, then change to lane 0. Therefore, PLCL can also be called lane change left twice;
 * LCR: lane change right;
 * PLCR: prepare lane change right. the vehicle first change to lane 1, then change to lane 2. Therefore, PLCR can also be called lane change right twice.
 
-2. Two constraints on the states are used:
+Two constraints on the states are used:
 * The vehicle cannot choose actions that leads the vehicle out of the lanes: **"vehicle.cpp" line 248-262**
 
 To be specific, when the main vehicle is on lane0, then it can only choose "KL","LCR","PLCR";  when the main vehicle is on lane1, then it can only choose "KL","LCR","LCL"; when the main vehicle is on lane2, then it can only choose "KL","LCL","PLCL"; 
@@ -205,7 +206,7 @@ To be specific, when the main vehicle is on lane0, then it can only choose "KL",
 
 LCL <-> LCR, LCL <-> PLCR, PLCL <-> LCR, PLCL <-> PLCR
 
-#### trajectory generation
+#### 2. Trajectory generation
 For each state in the successor_states:
 1. select anchor points according to the specific state: **"vehicle.cpp" line 163-206**
 If the vehicle's velocity `ref_vel` is lower than 5m/s, lane change at fixed distances is used: 
@@ -233,7 +234,7 @@ if the vehicle's velocity `ref_vel` is larger than 5m/s, lane change at fixed ti
 4. combine the previous_path points and `horizon*50-prev_size` new points generated by the spline curve (new points have been transformed back to the global coordinate system) to form the new candidate trajectory: **"vehicle.cpp" line 375-403**
 5. convert x,y trajectories to s,d trajectories which are used in collision detect: **"vehicle.cpp" line 406-419**
 
-#### cost calculation
+#### 3. Cost calculation
 1. cost_obstacle_avoidance: **"vehicle.cpp" line 453-476**
 For time horizon = 3s, there are 3 * 50 time substeps. The collision detection is done in frenet coordinates between the main vehicle and any other vehicles in the prediction at each time substep. If the longitudinal distance between the two vehicles is below `safe_longitudinal_distance` = 6.0m, as well as the lateral distance between the two vehicles is below `safe_lateral_distance` = 3.0m, the two vehicles are regarded as having collision with each other.
 
@@ -258,12 +259,12 @@ After the distance_ahead is transformed into fuzzy_distance, then a parabola cos
 
 3. the final cost equals to `weights[0] * cost_obstacle_avoidance + weights[1] * cost_traffic_jam`
 
-#### select the best trajectory and update the max velocity:  **"vehicle.cpp" line 212-217**
+#### 4. Select the best trajectory and update the max velocity:  **"vehicle.cpp" line 212-217**
 For the trajectory to a specific state, if the weighted_cost is not smaller than 99999.0 which indicates collision, then this trajectory is not taken into account, except for that this trajectory is a keep-lane trajectory. Then select the trajectory with the lowest weighted cost as the `best_trajectory`.
 
 if there is only one trajectory that can be selected and also has collision which means an emergency, then the max velocity `max_vel` is set to 5.0 m/s.
 
-#### update reference velocity: **"vehicle.cpp" line 234-240**
+#### 5. Update reference velocity: **"vehicle.cpp" line 234-240**
 If the reference velocity `ref_vel` is lower than max velocity `max_vel`, then add 0.2 to the `ref_vel`; otherwise if the reference velocity `ref_vel` is larger than max velocity `max_vel`, then minus 0.2 from the `ref_vel`;
 
 ### Performance

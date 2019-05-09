@@ -275,7 +275,7 @@ If the reference velocity `ref_vel` is lower than max velocity `max_vel`, then a
 
 ### Performance
 
-The above proposed planning algorithm achieved a best distance without incident of 61.27 miles on my local machine. The average distance between two accidents is about 22 miles. The screenshot of the best test is shown below:
+The above proposed planning algorithm achieved a best distance without accident of 61.27 miles on my local machine. The average distance between two accidents is about 22 miles. The screenshot of the best test is shown below:
 ![alt text][image1]
 
 ### Further improvements

@@ -151,7 +151,7 @@ A well written README file can enhance your project and portfolio.  Develop your
 A class named `Vehicle` (which is defined in "vehicle.cpp" and "vehicle.h") is created to store all the useful information and define all the behaviors of the main vehicle.
 
 Then in the main(), the following steps are taken: 
-1. an Vehicle object `agent` is declared and the map_waypoints info is stored in `agent`： **"main.cpp" line 57**
+1. An `Vehicle object` `agent` is declared and the map_waypoints info is stored in `agent`： **"main.cpp" line 57**
 ```c++
 Vehicle agent(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 ```
@@ -163,11 +163,11 @@ agent.setState(j[1]["x"], j[1]["y"], j[1]["s"], j[1]["d"], j[1]["yaw"], j[1]["sp
 ```c++
 agent.generatePrediction(sensor_fusion);
 ```
-4. The `agent` generate the best trajectory of time horizon = 3s ： **"main.cpp" line 105**
+4. The `agent` generates the best trajectory in the time horizon = 3s ： **"main.cpp" line 105**
 ```c++
 agent.FSMPlanner();
 ```
-5. Only output the first 0.5 second trajectory to the simulator and throw away the next 2.5 seconds motion in the best_trajectory： **"main.cpp" line 108-109**
+5. The `agent` only outputs the first 0.5 second trajectory to the simulator and throws away the next 2.5 seconds motion in the best_trajectory： **"main.cpp" line 108-109**
 ```c++
 vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 25);
 vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.best_trajectory.next_y_vals.cbegin() + 25);

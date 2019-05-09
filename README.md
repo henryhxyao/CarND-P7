@@ -193,16 +193,25 @@ A simple linear model (the vehicle's speed and lateral positon check_car_d are c
 2 and 3 are used to keep enough space between the vehicle ahead.
 
 #### generate distance_ahead on each lane: "vehicle.cpp" line 116-150
-
-To measure which lane is currently free of traffic, calculate the longitudinal distance of the nearest vehicle ahead on each lane to the main vehicle and store these distances as `distances_ahead`. These values are used in the cost calucation function.
-
+To measure which lane is currently free of traffic, calculate the longitudinal distance of the nearest vehicle ahead on each lane (lane0, lane1, lane2) to the main vehicle and store these three distances as `distances_ahead`. These values are used in the cost calculation function.
 
 ### Planner
-#### generate successor states
+#### generate successor states:
+A finite state machine of 5 states are used:
+* KL: keep lane;
+* LCL: lane change left;
+* PLCL: prepare lane change left. the vehicle first change to lane 1, then change to lane 0. Therefore, PLCL can also be called lane change left twice;
+* LCR: lane change right;
+* PLCR: prepare lane change right. the vehicle first change to lane 1, then change to lane 2. Therefore, PLCR can also be called lane change right twice.
 
-
-
-
+Two constraints on the states are used:
+1. The vehicle cannot choose actions that leads the vehicle out of the lanes: "vehicle.cpp" line 248-262
+To be specific, when the main vehicle is on lane0, then it can only choose "KL","LCR","PLCR";  when the main vehicle is on lane1, then it can only choose "KL","LCR","LCL"; when the main vehicle is on lane2, then it can only choose "KL","LCL","PLCL"; 
+2. To avoid the accelerations and jerks of the planned trajectories getting to large, the following state transitions are not allowed: "vehicle.cpp" line 264-306
+* LCL <-> LCR
+* LCL <-> PLCR
+* PLCL <-> LCR
+* PLCL <-> PLCR
 
 #### generate trajectory
 

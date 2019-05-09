@@ -480,6 +480,7 @@ double Vehicle::calculateCostTrafficJam(const Trajectory &candidate_trajectory) 
   double cost_traffic_jam; 
   double candidate_end_lane = candidate_trajectory.target_lane;
   
+  // transform the distances_ahead into fuzzy_distances_ahead
   vector<double> fuzzy_distances_ahead = fuzzyDistance(distances_ahead);
   
   double fuzzy_distance = fuzzy_distances_ahead[(int)candidate_end_lane];

@@ -146,30 +146,35 @@ A well written README file can enhance your project and portfolio.  Develop your
 ## Model Explanation
 ### Overview
 
-A class named "Vehicle" (which is defined in "vehicle.cpp" and "vehicle.h") is created to store all the useful information and define all the behaviors of the main vehicle.
+A class named `Vehicle` (which is defined in "vehicle.cpp" and "vehicle.h") is created to store all the useful information and define all the behaviors of the main vehicle.
 
 Then in the main(), the following steps are taken: 
-1. an Vehicle object "agent" is declared and the map_waypoints info is stored in "agent". 
+1. an Vehicle object `agent` is declared and the map_waypoints info is stored in `agent`. 
+
 "main.cpp" line 57:
 ```c++
 Vehicle agent(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 ```
-2. After the main car's localization and sensor fusion data are received, store these data in "agent".
+2. After the main car's localization and sensor fusion data are received, store these data in `agent`.
+
 "main.cpp" line 95:
 ```c++
 agent.setState(j[1]["x"], j[1]["y"], j[1]["s"], j[1]["d"], j[1]["yaw"], j[1]["speed"], j[1]["previous_path_x"], j[1]["previous_path_y"], j[1]["end_path_s"], j[1]["end_path_d"]);
 ```
-3. Using the sensor fusion data, the "agent" predicts the trajectory of other vehicles in the time horizon of 3s.
+3. Using the sensor fusion data, the `agent` predicts the trajectory of other vehicles in the time horizon of 3s.
+
 "main.cpp" line 103:
 ```c++
 agent.generatePrediction(sensor_fusion);
 ```
-4. The "agent" generate the best trajectory of time horizon = 3s  
+4. The `agent` generate the best trajectory of time horizon = 3s  
+
 "main.cpp" line 105:
 ```c++
 agent.FSMPlanner();
 ```
-5. Only output the first 0.5 second trajectory to the simulator and throw away the next 2.5 seconds motion in the best_trajectory
+5. Only output the first 0.5 second trajectory to the simulator and throw away the next 2.5 seconds motion in the best_trajectory.
+
 "main.cpp" line 108-109:
 ```c++
 vector<double> next_x_vals(agent.best_trajectory.next_x_vals.cbegin(), agent.best_trajectory.next_x_vals.cbegin() + 25);
@@ -178,14 +183,22 @@ vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.bes
 
 ### Prediction
 
+#### generate prediction "vehicle.cpp" line 53-94
+
+A simple linear model (the vehicle's speed and lateral positon check_car_d are constant) is used to generate motion prediction, `predicted_s` and `predicted_d` for the vehicles within 120m around the main vehicle. Meanwhile, check if there is a vehicle on the same lane with the main vehicle within the distance of 30m. If so, record its distance to the main vehicle as `following_distance` and its velocity as `vel_ahead`.
+
+#### update max velocity "vehicle.cpp" line 96-114
+1. set max velocity `max_vel` to be 22m/s (equals to 49.2mph which is within speed limit);
+2. if `following_distance` is less than 30m and the current trajectory is keeping lane, then set `max_vel` to be `vel_ahead`-2; 
+3. if `following_distance` is less than 10m which indicates potential danger, then set `max_vel` to be `vel_ahead`-5;
+2 and 3 are used to keep enough space between the vehicle ahead.
+
+#### generate distance_ahead on each lane "vehicle.cpp" line 116-150
+
+To measure which lane is currently free of traffic, calculate the longitudinal distance of the nearest vehicle ahead on each lane to the main vehicle and store these distances as `distances_ahead`. These values are used in the cost calucation function.
 
 
-
-
-
-
-
-### PLanner
+### Planner
 #### generate successor states
 
 
@@ -197,7 +210,11 @@ vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.bes
 
 
 
+
+
 #### cost design 
+
+
 
 
 
@@ -207,6 +224,8 @@ vector<double> next_y_vals(agent.best_trajectory.next_y_vals.cbegin(), agent.bes
 
 
 
-### Further improvements
 
+
+### Further improvements
+1. For now, the proposed method will fail if the vehicle on the adjacent lane suddenly changes lane. One solution will be using more complex prediction models like AMM and trajectory clustering introduced in the lessons.
 

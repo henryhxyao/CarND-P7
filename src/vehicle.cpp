@@ -55,7 +55,7 @@ void Vehicle::generatePrediction(const vector<vector<double>> &sensor_fusion) {
   double following_distance = 30.0;
   double vel_ahead = 999.0;
   bool has_car_ahead = false;
-
+  // generate motion prediction for vehicles around the main vehicle
   for (int i = 0; i< sensor_fusion.size(); ++i) {
     double detected_car_x = sensor_fusion[i][1];
     double detected_car_y = sensor_fusion[i][2];
@@ -68,20 +68,20 @@ void Vehicle::generatePrediction(const vector<vector<double>> &sensor_fusion) {
   	  float check_car_d = sensor_fusion[i][6];
   	  double check_speed = sqrt(vx*vx + vy*vy);
 
-	  // update max_vel 
+ 
 	  double car_lane = floor(car_d / 4.0);
-	  if ((check_car_d < (2 + 4 * car_lane + 2)) && (check_car_d > (2 + 4 * car_lane - 2))) {
-	  	  // ignore the car right behind
-          if (check_car_s < car_s) {
-            continue;
-          }
+	    if ((check_car_d < (2 + 4 * car_lane + 2)) && (check_car_d > (2 + 4 * car_lane - 2))) {
+	    // ignore the car right behind
+        if (check_car_s < car_s) {
+          continue;
+        }
           
           // check the nearest car ahead
 		  if ((check_car_s > car_s) && ((check_car_s - car_s) < following_distance)) {
 			  following_distance = check_car_s - car_s;
 			  vel_ahead = check_speed;
 			  has_car_ahead = true;
-		  }
+	    }
 	  }
 
       for(int i = 0; i < horizon*50; ++i) {
@@ -93,6 +93,7 @@ void Vehicle::generatePrediction(const vector<vector<double>> &sensor_fusion) {
     }
   }
 
+  // update max_vel
   cout << "**********************************************" << endl;
   if (has_car_ahead == true) {
   	cout << "following distance " << following_distance << endl;

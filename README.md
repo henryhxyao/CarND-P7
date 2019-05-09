@@ -245,7 +245,7 @@ If there is collision with any vehicle at any time substep for the main vehicle,
 
 * Cost_traffic_jam: **"vehicle.cpp" line 478-491**
 
-The `distances_ahead`(vector<double>) which has already been calculated in the prediction serves as a good indication of the traffic condition on each lane. If the `distances_ahead[i]` is large, then the i-th lane is good because the vehicle ahead on that lane is quite far away. Therefore, it is obvious to select the lane with the largest value in the `distances_ahead` as the best lane. In terms of `cost_traffic_jam`, the trajectory which end lane's distance_ahead is largest should have the lowest cost value.
+The `distances_ahead`(which is a vector of 3 elements) which has already been calculated in the prediction serves as a good indication of the traffic condition on each lane. If the `distances_ahead[i]` is large, then the i-th lane is good because the vehicle ahead on that lane is quite far away. Therefore, it is obvious to select the lane with the largest value in the `distances_ahead` as the best lane. In terms of `cost_traffic_jam`, the trajectory which end lane's distance_ahead is largest should have the lowest cost value.
 
 However, this cost function design can lead to rapid decision change when any two lanes has similar distance_ahead. For example, if the planner is given the following distances_ahead time series: 
 

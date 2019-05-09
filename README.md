@@ -255,6 +255,7 @@ The `distances_ahead`(vector<double>) which has already been calculated in the p
 However, this cost function design can lead to rapid decision change when any two lanes has similar distance_ahead. For example, if the planner is given the following distances_ahead time series: 
 
 | time | distances_ahead | goal_lane_selection |
+| ------ | ------ |------ |
 | t0 | {15, 12, 16} | 2 |
 | t1 | {15, 12, 14} | 0 |
 | t2 | {15, 12, 16} | 2 |

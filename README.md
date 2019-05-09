@@ -151,7 +151,7 @@ A well written README file can enhance your project and portfolio.  Develop your
 A class named `Vehicle` (which is defined in "vehicle.cpp" and "vehicle.h") is created to store all the useful information and define all the behaviors of the main vehicle.
 
 Then in the main(), the following steps are taken: 
-1. An `Vehicle object` `agent` is declared and the map_waypoints info is stored in `agent`： **"main.cpp" line 57**
+1. An `Vehicle` object `agent` is declared and the map_waypoints info is stored in `agent`： **"main.cpp" line 57**
 ```c++
 Vehicle agent(map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 ```
